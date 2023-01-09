@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WEBGL-CHAPTER4 MultiAttributeSize 缓冲区多种数据</title>
+  <style>
+    #clearCanvas {
+      width: 100px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      background: yellowgreen;
+      margin: 10px 0;
+    }
+
+  </style>
+</head>
+
+<body>
+  <header>WEBGL</header>
+
+  <div id="clearCanvas" > Clear Button</div>
+
+  <!-- 浏览器如果遇到不识别的标签的话会无视掉的，浏览器不会认为这是javascript代码的 -->
+  <!-- vertexShader 顶点着色器 -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec4 a_Position;
+    attribute float a_PointSize;
+    attribute vec4 a_Color;
+    varying vec4 v_Color;  // varying 变量
+    void main() {
+      gl_Position = a_Position;
+      gl_PointSize = a_PointSize;
+      v_Color = a_Color;   // 将数据传给片元着色器
+    }
+  </script>
+
+  <!-- fragmentShader 顶点着色器 -->
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec4 v_Color; // varying 变量
+    void main() {
+      gl_FragColor = v_Color;  // 从顶点着色器接收数据
+    }
+  </script>
+
+  <script>
+    const clearBTN = document.getElementById('clearCanvas')
+    const canvas = document.createElement('canvas')
+    canvas.width = 600
+    canvas.height = 600
+    document.body.appendChild(canvas)
+
+    const gl = canvas.getContext('webgl')
+
+    // 顶点着色器源码
+    let vertexShaderSource = document.getElementById('vertexShader').textContent;
+
+    // 片元着色器源码
+    let fragShaderSource = document.getElementById('fragmentShader').textContent;
+
+    // 声明初始化着色器函数
+    function initShaders(gl, vertexShaderSource, fragmentShaderSource) {
+      // 创建顶点着色器对象
+      let vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      // 创建片元着色器对象
+      let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+      // 引入顶点、片元着色器源代码
+      gl.shaderSource(vertexShader, vertexShaderSource);
+      gl.shaderSource(fragmentShader, fragmentShaderSource);
+      // 编译顶点、片元着色器
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      // 创建程序对象program
+      let program = gl.createProgram();
+      // 附着顶点着色器和片元着色器到program
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      // 链接program
+      gl.linkProgram(program);
+      // 使用program
+      gl.useProgram(program);
+
+      return program
+    }
+
+    // 初始化着色器
+    let program = initShaders(gl, vertexShaderSource, fragShaderSource);
+
+    // 获取 a_Position 变量存储位置，顶点坐标
+    let a_Position = gl.getAttribLocation(program, 'a_Position');
+    let a_PointSize = gl.getAttribLocation(program, 'a_PointSize');
+
+    // 获取 a_Color 的存储位置，分配缓冲区并开启
+    let a_Color = gl.getAttribLocation(program, 'a_Color')
+
+    // 记录所有点击坐标点
+    let pointList = [];
+
+    // 设置背景颜色
+    gl.clearColor(0.5, 0.6, 0.5, 1.0);
+
+    // 清空颜色缓冲区，使用设置的背景色
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    let n = 3 // 顶点数量
+    let verticesColors = new Float32Array([
+      // 顶点坐标、size和颜色
+      0.0, 0.5, 1.0, 0.0, 0.0, 10.0,
+      -0.5, -0.5, 0.0, 1.0, 0.0, 20.0,
+      0.5, -0.5, 0.0, 0.0, 1.0, 30.0,
+    ])
+
+    let vertexColorBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexColorBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, verticesColors, gl.STATIC_DRAW)
+
+    const FSIZE = verticesColors.BYTES_PER_ELEMENT
+
+    // 整个缓存区对象分配给 attribute 变量，第二个参数 size 表示缓冲区中每个顶点有几个分量值
+    gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 6, 0)
+
+    // 开启激活 attribute 变量， 使缓存区对 attribute 变量生效
+    gl.enableVertexAttribArray(a_Position)
+
+    gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 6, FSIZE * 2)
+    gl.enableVertexAttribArray(a_Color)
+
+    gl.vertexAttribPointer(a_PointSize, 1, gl.FLOAT, false, FSIZE * 6, FSIZE * 5)
+    gl.enableVertexAttribArray(a_PointSize)
+
+    // gl.drawArrays(gl.TRIANGLES, 0, n)
+    gl.drawArrays(gl.POINTS, 0, n)
+
+    // 清除操作
+    clearBTN.addEventListener('click', ()=> {
+      pointList = []
+      gl.clear(gl.COLOR_BUFFER_BIT)
+    })
+
+  </script>
+</body>
+
+</html>

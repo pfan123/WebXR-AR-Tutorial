@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WEBGL-CHAPTER3-6 RotatedTriangle_Matrix</title>
+  <style>
+    #clearCanvas {
+      width: 100px;
+      height: 30px;
+      line-height: 30px;
+      text-align: center;
+      background: yellowgreen;
+      margin: 10px 0;
+    }
+
+  </style>
+</head>
+
+<body>
+  <header>WEBGL</header>
+
+  <div id="clearCanvas" > Clear Button</div>
+
+  <!-- 浏览器如果遇到不识别的标签的话会无视掉的，浏览器不会认为这是javascript代码的 -->
+  <!-- vertexShader 顶点着色器 -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec4 a_Position;
+    attribute float a_PointSize;
+    uniform mat4 u_xformMatrix;
+    void main() {
+      gl_Position = u_xformMatrix * a_Position;
+      gl_PointSize = a_PointSize;
+    }
+  </script>
+
+  <!-- fragmentShader 顶点着色器 -->
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform vec4 u_FragColor;
+    void main() {
+      gl_FragColor = u_FragColor;
+    }
+  </script>
+
+  <script>
+    const clearBTN = document.getElementById('clearCanvas')
+    const canvas = document.createElement('canvas')
+    canvas.width = 600
+    canvas.height = 600
+    document.body.appendChild(canvas)
+
+    const gl = canvas.getContext('webgl')
+
+    // 顶点着色器源码
+    let vertexShaderSource = document.getElementById('vertexShader').textContent;
+
+    // 片元着色器源码
+    let fragShaderSource = document.getElementById('fragmentShader').textContent;
+
+    // 声明初始化着色器函数
+    function initShaders(gl, vertexShaderSource, fragmentShaderSource) {
+      // 创建顶点着色器对象
+      let vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      // 创建片元着色器对象
+      let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+      // 引入顶点、片元着色器源代码
+      gl.shaderSource(vertexShader, vertexShaderSource);
+      gl.shaderSource(fragmentShader, fragmentShaderSource);
+      // 编译顶点、片元着色器
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      // 创建程序对象program
+      let program = gl.createProgram();
+      // 附着顶点着色器和片元着色器到program
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      // 链接program
+      gl.linkProgram(program);
+      // 使用program
+      gl.useProgram(program);
+
+      return program
+    }
+
+    // 生成随机颜色的色值
+    function randomColor() {
+      return {
+        r: Math.random(),
+        g: Math.random(),
+        b: Math.random(),
+        a: 1
+      };
+    }
+
+    // 初始化着色器
+    let program = initShaders(gl, vertexShaderSource, fragShaderSource);
+
+    // 获取 a_Position 变量存储位置，顶点坐标
+    let a_Position = gl.getAttribLocation(program, 'a_Position');
+    let a_PointSize = gl.getAttribLocation(program, 'a_PointSize');
+
+    // 获取 u_FragColor 变量存储位置，片元颜色
+    let u_FragColor = gl.getUniformLocation(program, 'u_FragColor');
+    let u_xformMatrix = gl.getUniformLocation(program, 'u_xformMatrix');
+
+    // 记录所有点击坐标点
+    let pointList = [];
+
+    // 设置背景颜色
+    gl.clearColor(0.0, 0.0, 1.0, 1.0);
+
+    // 清空颜色缓冲区，使用设置的背景色
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+
+    let vertexBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer)
+
+    // 旋转角度
+    const ANGLE = 60.0
+    let radian = Math.PI * ANGLE / 180.0 // 转为弧度制
+    let cosB = Math.cos(radian)
+    let sinB = Math.sin(radian)
+
+    let vertices = new Float32Array([
+      0.0, 0.5, -0.5, -0.5, 0.5, -0.5
+    ])
+
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+
+    // 整个缓存区对象分配给 attribute 变量，第二个参数 size 表示缓冲区中每个顶点有几个分量值
+    gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 0, 0)
+
+    // 开启激活 attribute 变量， 使缓存区对 attribute 变量生效
+    gl.enableVertexAttribArray(a_Position)
+    gl.uniform4f(u_FragColor, 1.0, 0.0, 0.0, 1.0)
+    gl.vertexAttrib1f(a_PointSize, 20.0)
+
+
+    let xformMatrix = new Float32Array([
+      cosB, sinB, 0.0, 0.0,
+      -sinB, cosB, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 1.0,
+    ])
+
+    // rotate
+    gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix)
+
+
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, 3)
+
+    // 清除操作
+    clearBTN.addEventListener('click', ()=> {
+      pointList = []
+      gl.clear(gl.COLOR_BUFFER_BIT)
+    })
+
+  </script>
+</body>
+
+</html>

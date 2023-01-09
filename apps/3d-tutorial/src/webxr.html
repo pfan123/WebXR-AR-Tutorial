@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR</title>
+</head>
+<body>
+  <header>WebXR</header>
+  <canvas id="canvas" width="300" height="300"></canvas>
+
+  <script type="module">
+
+    // If requested, use the polyfill to provide support for mobile devices and devices which only support WebVR.
+    import WebXRPolyfill from '../webxr-samples/js/third-party/webxr-polyfill/build/webxr-polyfill.module.js';
+    if (!("xr" in window.navigator)) {
+      new WebXRPolyfill()
+    }
+
+    const canvas = document.getElementById("canvas")
+
+    if ("xr" in window.navigator) {
+      /* WebXR can be used! */
+      console.info('WebXR can be used!')
+      const VRDevices =  Navigator.getVRDevices
+      console.info('VRDevices', VRDevices)
+
+      // 支持模式判断 inline, immersive-vr, immersive-ar 体验模式, 返回 promise
+      // navigator.xr.isSessionSupported('inline')
+      // navigator.xr.isSessionSupported('immersive-vr')
+      // navigator.xr.isSessionSupported('immersive-ar')
+
+      let xrReferenceSpace = null
+      const gl = canvas.getContext('webgl', { xrCompatible: true })
+
+
+      const onXRFrame = async (time, xrFrame) => {
+
+        let session = xrFrame.session;
+
+        // XRViewerPose (XR 查看者姿势) 获取用户在虚拟空间中的位置和方向
+        let pose = xrFrame.getViewerPose(xrReferenceSpace)
+
+        if (pose) {
+          let xrWebGLLayer = session.renderState.baseLayer;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, xrWebGLLayer.framebuffer)
+
+          // 设置进入vr 模式后的场景颜色值变换
+          gl.clearColor(Math.cos(time/ 2000),
+            Math.cos(time/ 4000),
+            Math.cos(time/ 6000), 1.0)
+
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
+
+          // views 表示左眼和右眼
+          for (let xrView of pose.views) {
+            let xrViewport = xrWebGLLayer.getViewport(xrView)
+
+            // webglcontext 根据左右眼看到的信息，生成那一块的快照
+            gl.viewport(xrViewport.x, xrViewport.y,
+                        xrViewport.width, xrViewport.height)
+          }
+        }
+
+        session.requestAnimationFrame(onXRFrame);
+      }
+
+      // 内联会话无法在 XR 设备上显示内容，但可以允许访问设备跟踪信息并使用它在页面上呈现内容。
+      navigator.xr.requestSession("inline").then(async (xrSession) => {
+        xrReferenceSpace = await xrSession.requestReferenceSpace('viewer')
+        xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, gl) });
+
+        const requestHandleId = xrSession.requestAnimationFrame(onXRFrame)
+
+        // xrSession.cancelAnimationFrame(requestHandleId)
+        // xrSession.end()
+
+        xrSession.addEventListener('end', () => {
+          console.log('xrSession End')
+        });
+      })
+
+
+    } else {
+      /* WebXR isn't available */
+      console.info("WebXR isn't available")
+    }
+  </script>
+</body>
+</html>
